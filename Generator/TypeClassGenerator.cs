@@ -14,9 +14,9 @@ using System.Xml;
 namespace ExhaustiveMatch
 {
     [Generator]
-    public class ExhaustiveMatchGenerator : ISourceGenerator
+    public class ClassEnumGenerator : ISourceGenerator
     {
-        private const string AttributeName = "GenerateExhaustiveMatch";
+        private const string AttributeName = "GenerateTypeClass";
         private const string AttributeNamespace = "ExhaustiveMatch";
 
         private readonly string _attributeText = $@"using System;
@@ -33,7 +33,7 @@ namespace {AttributeNamespace}
         {
             context.AddSource(AttributeName, SourceText.From(_attributeText, Encoding.UTF8));
 
-            if (context.SyntaxReceiver is not SyntaxReceiver receiver)
+            if (context.SyntaxReceiver is not SyntaxReceiverTypeClass receiver)
             {
                 return;
             }
@@ -55,11 +55,11 @@ namespace {AttributeNamespace}
                 return;
             }
 
-            List<(INamedTypeSymbol, Location?, EnumDeclarationSyntax syntax)> namedTypeSymbols = new();
-            foreach (EnumDeclarationSyntax enumDeclaration in receiver.CandidateClasses)
+            List<(INamedTypeSymbol, Location?, ClassDeclarationSyntax syntax)> namedTypeSymbols = new();
+            foreach (ClassDeclarationSyntax classDeclaration in receiver.CandidateClasses)
             {
-                SemanticModel model = compilation.GetSemanticModel(enumDeclaration.SyntaxTree);
-                INamedTypeSymbol? namedTypeSymbol = model.GetDeclaredSymbol(enumDeclaration);
+                SemanticModel model = compilation.GetSemanticModel(classDeclaration.SyntaxTree);
+                INamedTypeSymbol? namedTypeSymbol = model.GetDeclaredSymbol(classDeclaration);
 
                 AttributeData? attributeData = namedTypeSymbol?.GetAttributes().FirstOrDefault(ad =>
                     ad.AttributeClass?.Equals(attributeSymbol, SymbolEqualityComparer.Default) != false);
@@ -67,7 +67,7 @@ namespace {AttributeNamespace}
                 if (attributeData is not null)
                 {
                     namedTypeSymbols.Add((namedTypeSymbol!,
-                        attributeData.ApplicationSyntaxReference?.GetSyntax().GetLocation(), enumDeclaration));
+                        attributeData.ApplicationSyntaxReference?.GetSyntax().GetLocation(), classDeclaration));
                 }
             }
 
@@ -86,9 +86,10 @@ namespace {AttributeNamespace}
 
         }
 
-        private string? ProcessClass(INamedTypeSymbol namedSymbol, GeneratorExecutionContext context, Location? attributeLocation, EnumDeclarationSyntax enumDeclaration)
+        private string? ProcessClass(INamedTypeSymbol namedSymbol, GeneratorExecutionContext context, Location? attributeLocation, ClassDeclarationSyntax markerClass)
         {
-            var enumMembers = enumDeclaration.Members.Select(
+            var enumMembers = markerClass.Members
+                .Select(
                 e => e.ToString()
             ).ToList();
 
@@ -147,22 +148,22 @@ namespace {namedSymbol.ContainingNamespace.Name}
 #if DEBUG
             if (!Debugger.IsAttached)
             {
-                // Debugger.Launch();
+                Debugger.Launch();
             }
 #endif 
-            context.RegisterForSyntaxNotifications(() => new SyntaxReceiver());
+            context.RegisterForSyntaxNotifications(() => new SyntaxReceiverTypeClass());
         }
+    }
 
-        private class SyntaxReceiver : ISyntaxReceiver
+    internal class SyntaxReceiverTypeClass : ISyntaxReceiver
+    {
+        public List<ClassDeclarationSyntax> CandidateClasses { get; } = new();
+
+        public void OnVisitSyntaxNode(SyntaxNode syntaxNode)
         {
-            public List<EnumDeclarationSyntax> CandidateClasses { get; } = new();
-
-            public void OnVisitSyntaxNode(SyntaxNode syntaxNode)
+            if (syntaxNode is ClassDeclarationSyntax { AttributeLists: { Count: > 0 } } classDeclarationSyntax)
             {
-                if (syntaxNode is EnumDeclarationSyntax { AttributeLists: { Count: > 0 } } classDeclarationSyntax)
-                {
-                    CandidateClasses.Add(classDeclarationSyntax);
-                }
+                CandidateClasses.Add(classDeclarationSyntax);
             }
         }
     }
