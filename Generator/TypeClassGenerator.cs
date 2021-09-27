@@ -23,7 +23,7 @@ namespace ExhaustiveMatch
 
 namespace {AttributeNamespace}
 {{
-    [AttributeUsage(AttributeTargets.Enum, Inherited = false, AllowMultiple = false)]
+    [AttributeUsage(AttributeTargets.Class, Inherited = false, AllowMultiple = false)]
     public sealed class {AttributeName} : Attribute
     {{
     }}
@@ -55,7 +55,7 @@ namespace {AttributeNamespace}
                 return;
             }
 
-            List<(INamedTypeSymbol, Location?, ClassDeclarationSyntax syntax)> namedTypeSymbols = new();
+            List<(INamedTypeSymbol, Location?, ClassDeclarationSyntax syntax, SemanticModel)> namedTypeSymbols = new();
             foreach (ClassDeclarationSyntax classDeclaration in receiver.CandidateClasses)
             {
                 SemanticModel model = compilation.GetSemanticModel(classDeclaration.SyntaxTree);
@@ -67,13 +67,13 @@ namespace {AttributeNamespace}
                 if (attributeData is not null)
                 {
                     namedTypeSymbols.Add((namedTypeSymbol!,
-                        attributeData.ApplicationSyntaxReference?.GetSyntax().GetLocation(), classDeclaration));
+                        attributeData.ApplicationSyntaxReference?.GetSyntax().GetLocation(), classDeclaration, model));
                 }
             }
 
-            foreach (var (namedSymbol, attributeLocation, enumDeclaration) in namedTypeSymbols)
+            foreach (var (namedSymbol, attributeLocation, enumDeclaration, model) in namedTypeSymbols)
             {
-                string? classSource = ProcessClass(namedSymbol, context, attributeLocation, enumDeclaration);
+                string? classSource = ProcessClass(namedSymbol, context, attributeLocation, enumDeclaration, model);
 
                 if (classSource is null)
                 {
@@ -86,31 +86,33 @@ namespace {AttributeNamespace}
 
         }
 
-        private string? ProcessClass(INamedTypeSymbol namedSymbol, GeneratorExecutionContext context, Location? attributeLocation, ClassDeclarationSyntax markerClass)
+        private string? ProcessClass(INamedTypeSymbol namedSymbol, GeneratorExecutionContext context, Location? attributeLocation, ClassDeclarationSyntax markerClass, SemanticModel model)
         {
-            var enumMembers = markerClass.Members
-                .Select(
-                e => e.ToString()
-            ).ToList();
+            var enumMembers = markerClass
+                .Members
+                .Where(m => m is ClassDeclarationSyntax c)
+                .Select(m => model.GetDeclaredSymbol(m) as ITypeSymbol)
+                .Where(m => SymbolEqualityComparer.Default.Equals(m.BaseType, namedSymbol))
+                .ToList();
 
             var actions = string.Join(", ", enumMembers.Select(member =>
-                $"System.Func<T> when{member!}"
+                $"System.Func<{member},T> when{member!.Name!}"
             ));
 
             var vars = string.Join(", ", enumMembers.Select(member =>
-                $"T when{member!}"
+                $"T when{member!.Name}"
             ));
 
-            var caseStatements = string.Join("\n", enumMembers.Select(member =>
+            var caseStatements = string.Join("\n", enumMembers.Select((member, idx) =>
 
-                @$"case {namedSymbol.Name}.{member!}:
-                    return when{member!}.Invoke();"
+                @$"if (t is {member!} t{idx})
+                    return when{member!.Name}.Invoke(t{idx});"
 !));
 
-            var caseStatementVars = string.Join("\n", enumMembers.Select(member =>
+            var caseStatementVars = string.Join("\n", enumMembers.Select((member, idx) =>
 
-                @$"case {namedSymbol.Name}.{member!}:
-                    return when{member!};"
+                @$"if (t is {member!} t{idx})
+                    return when{member!.Name};"
 !));
 
             var classDecleration = @$"
@@ -120,19 +122,13 @@ namespace {namedSymbol.ContainingNamespace.Name}
     {{
         public static T Match<T>(this {namedSymbol.Name} t, {actions})
         {{
-            switch (t)
-            {{
-                {caseStatements}
-            }}
+            {caseStatements}
             throw new System.Exception(""Unreachable"");
         }}
 
         public static T Match<T>(this {namedSymbol.Name} t, {vars})
         {{
-            switch (t)
-            {{
-                {caseStatementVars}
-            }}
+            {caseStatementVars}
             throw new System.Exception(""Unreachable"");
         }}
     }}
@@ -148,7 +144,7 @@ namespace {namedSymbol.ContainingNamespace.Name}
 #if DEBUG
             if (!Debugger.IsAttached)
             {
-                Debugger.Launch();
+                // Debugger.Launch();
             }
 #endif 
             context.RegisterForSyntaxNotifications(() => new SyntaxReceiverTypeClass());
