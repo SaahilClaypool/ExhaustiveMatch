@@ -104,16 +104,14 @@ namespace {AttributeNamespace}
             ));
 
             var caseStatements = string.Join("\n", enumMembers.Select((member, idx) =>
-
                 @$"if (t is {member!} t{idx})
                     return when{member!.Name}.Invoke(t{idx});"
-!));
+            !));
 
             var caseStatementVars = string.Join("\n", enumMembers.Select((member, idx) =>
-
                 @$"if (t is {member!} t{idx})
                     return when{member!.Name};"
-!));
+            !));
 
             var classDecleration = @$"
 namespace {namedSymbol.ContainingNamespace.Name}

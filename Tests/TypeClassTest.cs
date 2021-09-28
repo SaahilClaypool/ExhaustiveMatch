@@ -24,6 +24,33 @@ namespace Tests
         public void TestConstants()
         {
         }
+
+        [Fact]
+        public void TestErrorClass()
+        {
+        }
+    }
+
+    [GenerateTypeClass]
+    public abstract class Result
+    {
+        public class Ok<T> : Result
+        {
+            public T Value { get; }
+            public Ok(T value)
+            {
+                this.Value = value;
+            }
+        }
+
+        public class Error<T> : Result
+        {
+            public T Value { get; }
+            public Error(T value)
+            {
+                this.Value = value;
+            }
+        }
     }
 
     [GenerateTypeClass]
