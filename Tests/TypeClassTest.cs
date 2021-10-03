@@ -24,39 +24,12 @@ namespace Tests
         public void TestConstants()
         {
         }
-
-        [Fact]
-        public void TestErrorClass()
-        {
-        }
-    }
-
-    [GenerateTypeClass]
-    public abstract class Result
-    {
-        public class Ok<T> : Result
-        {
-            public T Value { get; }
-            public Ok(T value)
-            {
-                this.Value = value;
-            }
-        }
-
-        public class Error<T> : Result
-        {
-            public T Value { get; }
-            public Error(T value)
-            {
-                this.Value = value;
-            }
-        }
     }
 
     [GenerateTypeClass]
     public abstract class MyTypeClass
     {
-        public class A: MyTypeClass
+        public class A : MyTypeClass
         {
             public A(int x)
             {
@@ -64,8 +37,8 @@ namespace Tests
             }
             public int X { get; }
         }
-        public class B: MyTypeClass { };
-        public class C: MyTypeClass { };
+        public class B : MyTypeClass { };
+        public class C : MyTypeClass { };
 
         public int IgnoreMe { get; set; }
     }
