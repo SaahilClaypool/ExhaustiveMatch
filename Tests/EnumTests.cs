@@ -4,7 +4,7 @@ using ExhaustiveMatch;
 
 namespace Tests
 {
-    public class UnitTest1
+    public class EnumTests
     {
         [Fact]
         public void TestFunctions()

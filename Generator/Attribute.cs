@@ -29,7 +29,7 @@ namespace ExhaustiveMatch
                     return;
                 HasGenerated = true;
             }
-            context.AddSource(Name, SourceText.From(_attributeText, Encoding.UTF8));
+            context.AddSource("GenerateMatch_attribute.cs", SourceText.From(_attributeText, Encoding.UTF8));
         }
 
         public static (Compilation, INamedTypeSymbol) GetCompilationAndSymbol(GeneratorExecutionContext context)
