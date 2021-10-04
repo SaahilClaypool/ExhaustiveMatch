@@ -10,7 +10,10 @@ namespace Tests
         public void TestFunctions()
         {
             var a = MyEnum.A;
-            var x = a.Match(() => 1, () => 2, () => 3);
+            var x = a.Match(
+                whenA: () => 1,
+                whenB: () => 2,
+                whenC: () => 3);
             Assert.Equal(1, x);
         }
 
@@ -23,7 +26,7 @@ namespace Tests
         }
     }
 
-    [GenerateExhaustiveMatch]
+    [GenerateMatch]
     public enum MyEnum
     {
         A, B, C

@@ -26,10 +26,10 @@ namespace Tests
         }
     }
 
-    [GenerateTypeClass]
-    public abstract class MyTypeClass
+    [GenerateMatch]
+    public partial class MyTypeClass
     {
-        public class A : MyTypeClass
+        public class A: MyTypeClass
         {
             public A(int x)
             {
@@ -37,8 +37,8 @@ namespace Tests
             }
             public int X { get; }
         }
-        public class B : MyTypeClass { };
-        public class C : MyTypeClass { };
+        public class B: MyTypeClass { };
+        public class C: MyTypeClass { };
 
         public int IgnoreMe { get; set; }
     }

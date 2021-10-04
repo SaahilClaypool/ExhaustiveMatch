@@ -16,39 +16,16 @@ namespace ExhaustiveMatch
     [Generator]
     public class ClassEnumGenerator : ISourceGenerator
     {
-        private const string AttributeName = "GenerateTypeClass";
-        private const string AttributeNamespace = "ExhaustiveMatch";
-
-        private readonly string _attributeText = $@"using System;
-
-namespace {AttributeNamespace}
-{{
-    [AttributeUsage(AttributeTargets.Class, Inherited = false, AllowMultiple = false)]
-    public sealed class {AttributeName} : Attribute
-    {{
-    }}
-}}
-        ";
         public void Execute(GeneratorExecutionContext context)
         {
-            context.AddSource(AttributeName, SourceText.From(_attributeText, Encoding.UTF8));
+            AttributeGenerator.Generate(context);
 
             if (context.SyntaxReceiver is not SyntaxReceiverTypeClass receiver)
             {
                 return;
             }
 
-            if ((context.Compilation as CSharpCompilation)?.SyntaxTrees[0].Options is not CSharpParseOptions options)
-            {
-                return;
-            }
-
-            Compilation compilation =
-                context.Compilation.AddSyntaxTrees(
-                    CSharpSyntaxTree.ParseText(SourceText.From(_attributeText, Encoding.UTF8), options));
-
-            INamedTypeSymbol? attributeSymbol =
-                compilation.GetTypeByMetadataName($"{AttributeNamespace}.{AttributeName}");
+            var (compilation, attributeSymbol) = AttributeGenerator.GetCompilationAndSymbol(context);
 
             if (attributeSymbol is null)
             {
@@ -116,7 +93,7 @@ namespace {AttributeNamespace}
             var classDecleration = @$"
 namespace {namedSymbol.ContainingNamespace.Name}
 {{
-    public static class {namedSymbol.Name}Extensions
+    public static class {namedSymbol.Name}MatchExtensions
     {{
         public static T Match<T>(this {namedSymbol.Name} t, {actions})
         {{
