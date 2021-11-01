@@ -5,11 +5,19 @@
     <LangVersion>preview</LangVersion>
     <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
     <PackageId>ExhaustiveMatch.Generator</PackageId>
-        <Nullable>enable</Nullable>
+    <Version>1.0.0</Version>
+    <Authors>Saahil Claypool</Authors>
+    <Nullable>enable</Nullable>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <IncludeBuildOutput>false</IncludeBuildOutput>
+    <RepositoryUrl>https://github.com/SaahilClaypool/ExhaustiveMatch</RepositoryUrl>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
 
+  <ItemGroup>
+    <None Include="..\README.md" Pack="true" PackagePath="\"/>
+</ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.CodeAnalysis.Analyzers" Version="3.3.2">
         <PrivateAssets>all</PrivateAssets>
