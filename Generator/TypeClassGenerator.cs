@@ -11,86 +11,86 @@ using System.Linq;
 using System.Text;
 using System.Xml;
 
-namespace ExhaustiveMatch
+namespace ExhaustiveMatch;
+
+[Generator]
+public class ClassEnumGenerator : ISourceGenerator
 {
-    [Generator]
-    public class ClassEnumGenerator : ISourceGenerator
+    public void Execute(GeneratorExecutionContext context)
     {
-        public void Execute(GeneratorExecutionContext context)
+        AttributeGenerator.Generate(context);
+
+        if (context.SyntaxReceiver is not SyntaxReceiverTypeClass receiver)
         {
-            AttributeGenerator.Generate(context);
-
-            if (context.SyntaxReceiver is not SyntaxReceiverTypeClass receiver)
-            {
-                return;
-            }
-
-            var (compilation, attributeSymbol) = AttributeGenerator.GetCompilationAndSymbol(context);
-
-            if (attributeSymbol is null)
-            {
-                return;
-            }
-
-            List<(INamedTypeSymbol, Location?, ClassDeclarationSyntax syntax, SemanticModel)> namedTypeSymbols = new();
-            foreach (ClassDeclarationSyntax classDeclaration in receiver.CandidateClasses)
-            {
-                SemanticModel model = compilation.GetSemanticModel(classDeclaration.SyntaxTree);
-                INamedTypeSymbol? namedTypeSymbol = model.GetDeclaredSymbol(classDeclaration);
-
-                AttributeData? attributeData = namedTypeSymbol?.GetAttributes().FirstOrDefault(ad =>
-                    ad.AttributeClass?.Equals(attributeSymbol, SymbolEqualityComparer.Default) != false);
-
-                if (attributeData is not null)
-                {
-                    namedTypeSymbols.Add((namedTypeSymbol!,
-                        attributeData.ApplicationSyntaxReference?.GetSyntax().GetLocation(), classDeclaration, model));
-                }
-            }
-
-            foreach (var (namedSymbol, attributeLocation, enumDeclaration, model) in namedTypeSymbols)
-            {
-                string? classSource = ProcessClass(namedSymbol, context, attributeLocation, enumDeclaration, model);
-
-                if (classSource is null)
-                {
-                    continue;
-                }
-
-                context.AddSource($"{namedSymbol.ContainingNamespace}_{namedSymbol.Name}.generated.cs",
-                    SourceText.From(classSource, Encoding.UTF8));
-            }
-
+            return;
         }
 
-        private string? ProcessClass(INamedTypeSymbol namedSymbol, GeneratorExecutionContext context, Location? attributeLocation, ClassDeclarationSyntax markerClass, SemanticModel model)
+        var (compilation, attributeSymbol) = AttributeGenerator.GetCompilationAndSymbol(context);
+
+        if (attributeSymbol is null)
         {
-            var enumMembers = markerClass
-                .Members
-                .Where(m => m is ClassDeclarationSyntax c)
-                .Select(m => model.GetDeclaredSymbol(m) as ITypeSymbol)
-                .Where(m => SymbolEqualityComparer.Default.Equals(m.BaseType, namedSymbol))
-                .ToList();
+            return;
+        }
 
-            var actions = string.Join(", ", enumMembers.Select(member =>
-                $"System.Func<{member},T> when{member!.Name!}"
-            ));
+        List<(INamedTypeSymbol, Location?, ClassDeclarationSyntax syntax, SemanticModel)> namedTypeSymbols = new();
+        foreach (ClassDeclarationSyntax classDeclaration in receiver.CandidateClasses)
+        {
+            SemanticModel model = compilation.GetSemanticModel(classDeclaration.SyntaxTree);
+            INamedTypeSymbol? namedTypeSymbol = model.GetDeclaredSymbol(classDeclaration);
 
-            var vars = string.Join(", ", enumMembers.Select(member =>
-                $"T when{member!.Name}"
-            ));
+            AttributeData? attributeData = namedTypeSymbol?.GetAttributes().FirstOrDefault(ad =>
+                ad.AttributeClass?.Equals(attributeSymbol, SymbolEqualityComparer.Default) != false);
 
-            var caseStatements = string.Join("\n", enumMembers.Select((member, idx) =>
-                @$"if (t is {member!} t{idx})
+            if (attributeData is not null)
+            {
+                namedTypeSymbols.Add((namedTypeSymbol!,
+                    attributeData.ApplicationSyntaxReference?.GetSyntax().GetLocation(), classDeclaration, model));
+            }
+        }
+
+        foreach (var (namedSymbol, attributeLocation, enumDeclaration, model) in namedTypeSymbols)
+        {
+            string? classSource = ProcessClass(namedSymbol, context, attributeLocation, enumDeclaration, model);
+
+            if (classSource is null)
+            {
+                continue;
+            }
+
+            context.AddSource($"{namedSymbol.ContainingNamespace}_{namedSymbol.Name}.generated.cs",
+                SourceText.From(classSource, Encoding.UTF8));
+        }
+
+    }
+
+    private string? ProcessClass(INamedTypeSymbol namedSymbol, GeneratorExecutionContext context, Location? attributeLocation, ClassDeclarationSyntax markerClass, SemanticModel model)
+    {
+        var enumMembers = markerClass
+            .Members
+            .Where(m => m is ClassDeclarationSyntax c)
+            .Select(m => model.GetDeclaredSymbol(m) as ITypeSymbol)
+            .Where(m => SymbolEqualityComparer.Default.Equals(m.BaseType, namedSymbol))
+            .ToList();
+
+        var actions = string.Join(", ", enumMembers.Select(member =>
+            $"System.Func<{member},T> when{member!.Name!}"
+        ));
+
+        var vars = string.Join(", ", enumMembers.Select(member =>
+            $"T when{member!.Name}"
+        ));
+
+        var caseStatements = string.Join("\n", enumMembers.Select((member, idx) =>
+            @$"if (t is {member!} t{idx})
                     return when{member!.Name}.Invoke(t{idx});"
-            !));
+        !));
 
-            var caseStatementVars = string.Join("\n", enumMembers.Select((member, idx) =>
-                @$"if (t is {member!} t{idx})
+        var caseStatementVars = string.Join("\n", enumMembers.Select((member, idx) =>
+            @$"if (t is {member!} t{idx})
                     return when{member!.Name};"
-            !));
+        !));
 
-            var classDecleration = @$"
+        var classDecleration = @$"
 namespace {namedSymbol.ContainingNamespace.Name}
 {{
     public static class {namedSymbol.Name}MatchExtensions
@@ -110,32 +110,31 @@ namespace {namedSymbol.ContainingNamespace.Name}
 }}
 ";
 
-            return classDecleration;
-        }
-
-        public void Initialize(GeneratorInitializationContext context)
-        {
-
-#if DEBUG
-            if (!Debugger.IsAttached)
-            {
-                // Debugger.Launch();
-            }
-#endif 
-            context.RegisterForSyntaxNotifications(() => new SyntaxReceiverTypeClass());
-        }
+        return classDecleration;
     }
 
-    internal class SyntaxReceiverTypeClass : ISyntaxReceiver
+    public void Initialize(GeneratorInitializationContext context)
     {
-        public List<ClassDeclarationSyntax> CandidateClasses { get; } = new();
 
-        public void OnVisitSyntaxNode(SyntaxNode syntaxNode)
+#if DEBUG
+        if (!Debugger.IsAttached)
         {
-            if (syntaxNode is ClassDeclarationSyntax { AttributeLists: { Count: > 0 } } classDeclarationSyntax)
-            {
-                CandidateClasses.Add(classDeclarationSyntax);
-            }
+            // Debugger.Launch();
+        }
+#endif
+        context.RegisterForSyntaxNotifications(() => new SyntaxReceiverTypeClass());
+    }
+}
+
+internal class SyntaxReceiverTypeClass : ISyntaxReceiver
+{
+    public List<ClassDeclarationSyntax> CandidateClasses { get; } = new();
+
+    public void OnVisitSyntaxNode(SyntaxNode syntaxNode)
+    {
+        if (syntaxNode is ClassDeclarationSyntax { AttributeLists: { Count: > 0 } } classDeclarationSyntax)
+        {
+            CandidateClasses.Add(classDeclarationSyntax);
         }
     }
 }
