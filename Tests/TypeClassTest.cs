@@ -28,6 +28,13 @@ namespace Tests
             rec = new MyRecordEnum.CaseB(100);
             Assert.Equal("100", rec.Match(a => "a", b => b.Value.ToString()));
         }
+
+        [Fact]
+        public void WorksWithGenerics()
+        {
+            var rec = new GenericRecord<int>.CaseB(100);
+            Assert.Equal("100", rec.Match(a => "a", b => b.Value.ToString()));
+        }
     }
 
     [GenerateMatch]
@@ -52,5 +59,12 @@ namespace Tests
     {
         public record CaseA: MyRecordEnum { };
         public record CaseB(int Value): MyRecordEnum;
+    }
+
+    [GenerateMatch]
+    public abstract record GenericRecord<T>
+    {
+        public record CaseA: GenericRecord<T> { };
+        public record CaseB(T Value): GenericRecord<T>;
     }
 }

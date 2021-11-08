@@ -72,12 +72,27 @@ public class ClassEnumGenerator : ISourceGenerator
             .Where(m => SymbolEqualityComparer.Default.Equals(m.BaseType, namedSymbol))
             .ToList();
 
+        var genericExpression = markerClass
+            .TypeParameterList
+            ?.GetText()
+            ?.ToString()
+            ?.Trim();
+
+        var typeGenerics = genericExpression
+            ?.Trim()
+            ?.Trim('<', '>')
+            ?.Split(',')
+            ?? new string[0];
+            
+        var methodType = "TReturnType";
+        var methodGeneric = string.Join(", ", new string[] { methodType }.Concat(typeGenerics));
+
         var actions = string.Join(", ", enumMembers.Select(member =>
-            $"System.Func<{member},T> when{member!.Name!}"
+            $"System.Func<{member},{methodType}> when{member!.Name!}"
         ));
 
         var vars = string.Join(", ", enumMembers.Select(member =>
-            $"T when{member!.Name}"
+            $"{methodType} when{member!.Name}"
         ));
 
         var caseStatements = string.Join("\n", enumMembers.Select((member, idx) =>
@@ -95,13 +110,13 @@ namespace {namedSymbol.ContainingNamespace.Name}
 {{
     public static class {namedSymbol.Name}MatchExtensions
     {{
-        public static T Match<T>(this {namedSymbol.Name} t, {actions})
+        public static {methodType} Match<{methodGeneric}>(this {namedSymbol.Name}{genericExpression} t, {actions})
         {{
             {caseStatements}
             throw new System.Exception(""Unreachable"");
         }}
 
-        public static T Match<T>(this {namedSymbol.Name} t, {vars})
+        public static {methodType} Match<{methodGeneric}>(this {namedSymbol.Name}{genericExpression} t, {vars})
         {{
             {caseStatementVars}
             throw new System.Exception(""Unreachable"");
