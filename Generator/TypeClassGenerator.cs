@@ -32,11 +32,11 @@ public class ClassEnumGenerator : ISourceGenerator
             return;
         }
 
-        List<(INamedTypeSymbol, Location?, ClassDeclarationSyntax syntax, SemanticModel)> namedTypeSymbols = new();
-        foreach (ClassDeclarationSyntax classDeclaration in receiver.CandidateClasses)
+        List<(INamedTypeSymbol, Location?, TypeDeclarationSyntax syntax, SemanticModel)> namedTypeSymbols = new();
+        foreach (var typeDeclaration in receiver.CandidateClasses)
         {
-            SemanticModel model = compilation.GetSemanticModel(classDeclaration.SyntaxTree);
-            INamedTypeSymbol? namedTypeSymbol = model.GetDeclaredSymbol(classDeclaration);
+            SemanticModel model = compilation.GetSemanticModel(typeDeclaration.SyntaxTree);
+            INamedTypeSymbol? namedTypeSymbol = model.GetDeclaredSymbol(typeDeclaration);
 
             AttributeData? attributeData = namedTypeSymbol?.GetAttributes().FirstOrDefault(ad =>
                 ad.AttributeClass?.Equals(attributeSymbol, SymbolEqualityComparer.Default) != false);
@@ -44,13 +44,13 @@ public class ClassEnumGenerator : ISourceGenerator
             if (attributeData is not null)
             {
                 namedTypeSymbols.Add((namedTypeSymbol!,
-                    attributeData.ApplicationSyntaxReference?.GetSyntax().GetLocation(), classDeclaration, model));
+                    attributeData.ApplicationSyntaxReference?.GetSyntax().GetLocation(), typeDeclaration, model));
             }
         }
 
-        foreach (var (namedSymbol, attributeLocation, enumDeclaration, model) in namedTypeSymbols)
+        foreach (var (namedSymbol, attributeLocation, typeDeclaration, model) in namedTypeSymbols)
         {
-            string? classSource = ProcessClass(namedSymbol, context, attributeLocation, enumDeclaration, model);
+            string? classSource = ProcessClass(namedSymbol, context, attributeLocation, typeDeclaration, model);
 
             if (classSource is null)
             {
@@ -63,11 +63,11 @@ public class ClassEnumGenerator : ISourceGenerator
 
     }
 
-    private string? ProcessClass(INamedTypeSymbol namedSymbol, GeneratorExecutionContext context, Location? attributeLocation, ClassDeclarationSyntax markerClass, SemanticModel model)
+    private string? ProcessClass(INamedTypeSymbol namedSymbol, GeneratorExecutionContext context, Location? attributeLocation, TypeDeclarationSyntax markerClass, SemanticModel model)
     {
         var enumMembers = markerClass
             .Members
-            .Where(m => m is ClassDeclarationSyntax c)
+            .Where(m => m is TypeDeclarationSyntax c)
             .Select(m => model.GetDeclaredSymbol(m) as ITypeSymbol)
             .Where(m => SymbolEqualityComparer.Default.Equals(m.BaseType, namedSymbol))
             .ToList();
@@ -128,13 +128,13 @@ namespace {namedSymbol.ContainingNamespace.Name}
 
 internal class SyntaxReceiverTypeClass : ISyntaxReceiver
 {
-    public List<ClassDeclarationSyntax> CandidateClasses { get; } = new();
+    public List<TypeDeclarationSyntax> CandidateClasses { get; } = new();
 
     public void OnVisitSyntaxNode(SyntaxNode syntaxNode)
     {
-        if (syntaxNode is ClassDeclarationSyntax { AttributeLists: { Count: > 0 } } classDeclarationSyntax)
+        if (syntaxNode is TypeDeclarationSyntax { AttributeLists: { Count: > 0 } } typeDeclaration && typeDeclaration is ClassDeclarationSyntax or RecordDeclarationSyntax)
         {
-            CandidateClasses.Add(classDeclarationSyntax);
+            CandidateClasses.Add(typeDeclaration);
         }
     }
 }

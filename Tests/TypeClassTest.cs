@@ -21,13 +21,17 @@ namespace Tests
         }
 
         [Fact]
-        public void TestConstants()
+        public void TestRecords()
         {
+            MyRecordEnum rec = new MyRecordEnum.CaseA();
+            Assert.Equal("a", rec.Match(a => "a", b => b.Value.ToString()));
+            rec = new MyRecordEnum.CaseB(100);
+            Assert.Equal("100", rec.Match(a => "a", b => b.Value.ToString()));
         }
     }
 
     [GenerateMatch]
-    public partial class MyTypeClass
+    public abstract class MyTypeClass
     {
         public class A: MyTypeClass
         {
@@ -41,5 +45,12 @@ namespace Tests
         public class C: MyTypeClass { };
 
         public int IgnoreMe { get; set; }
+    }
+
+    [GenerateMatch]
+    public abstract record MyRecordEnum
+    {
+        public record CaseA: MyRecordEnum { };
+        public record CaseB(int Value): MyRecordEnum;
     }
 }

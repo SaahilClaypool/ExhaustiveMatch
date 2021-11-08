@@ -14,7 +14,7 @@ namespace ExhaustiveMatch
         private static readonly string _attributeText = $@"using System;
         namespace {Namespace}
         {{
-            [AttributeUsage(AttributeTargets.Class | AttributeTargets.Enum, Inherited = false, AllowMultiple = false)]
+            [AttributeUsage(AttributeTargets.Constructor | AttributeTargets.Class | AttributeTargets.Enum, Inherited = false, AllowMultiple = false)]
             public sealed class {Name} : Attribute
             {{
             }}
