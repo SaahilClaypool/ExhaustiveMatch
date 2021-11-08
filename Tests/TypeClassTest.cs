@@ -32,8 +32,9 @@ namespace Tests
         [Fact]
         public void WorksWithGenerics()
         {
-            var rec = new GenericRecord<int>.CaseB(100);
-            Assert.Equal("100", rec.Match(a => "a", b => b.Value.ToString()));
+            var rec = new GenericResultExample<int, string>.Ok(100);
+            Assert.Equal("100",
+                rec.Match(ok => ok.Value.ToString(), error => error.Value.ToString()));
         }
     }
 
@@ -62,9 +63,9 @@ namespace Tests
     }
 
     [GenerateMatch]
-    public abstract record GenericRecord<T>
+    public abstract record GenericResultExample<T, R>
     {
-        public record CaseA: GenericRecord<T> { };
-        public record CaseB(T Value): GenericRecord<T>;
+        public record Ok(T Value): GenericResultExample<T, R>;
+        public record Error(R Value): GenericResultExample<T, R>;
     }
 }
