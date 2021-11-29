@@ -24,8 +24,6 @@ namespace ExhaustiveMatch
                 return;
             }
 
-            AttributeGenerator.Generate(context);
-
             var (compilation, attributeSymbol) = AttributeGenerator.GetCompilationAndSymbol(context);
 
             if (attributeSymbol is null)

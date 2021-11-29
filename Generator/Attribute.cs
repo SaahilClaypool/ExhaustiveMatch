@@ -5,7 +5,8 @@ using Microsoft.CodeAnalysis.Text;
 
 namespace ExhaustiveMatch
 {
-    public class AttributeGenerator
+    [Generator]
+    public class AttributeGenerator : ISourceGenerator
     {
         public const string Name = "GenerateMatch";
         public const string Namespace = "ExhaustiveMatch";
@@ -20,20 +21,18 @@ namespace ExhaustiveMatch
             }}
         }}
                 ";
-        
+
         public static void Generate(GeneratorExecutionContext context)
         {
-            lock(Name)
-            {
-                if (HasGenerated)
-                    return;
-                HasGenerated = true;
-            }
+            HasGenerated = true;
             context.AddSource("GenerateMatch_attribute.cs", SourceText.From(_attributeText, Encoding.UTF8));
         }
 
         public static (Compilation, INamedTypeSymbol) GetCompilationAndSymbol(GeneratorExecutionContext context)
         {
+            if (!HasGenerated)
+                Generate(context);
+
             if ((context.Compilation as CSharpCompilation)?.SyntaxTrees[0].Options is not CSharpParseOptions options)
             {
                 throw new System.Exception("");
@@ -47,6 +46,16 @@ namespace ExhaustiveMatch
                 compilation.GetTypeByMetadataName($"{Namespace}.{Name}");
 
             return (compilation, attributeSymbol!);
+        }
+
+        public void Initialize(GeneratorInitializationContext context)
+        {
+            context.RegisterForSyntaxNotifications(() => new SyntaxReceiverTypeClass());
+        }
+
+        public void Execute(GeneratorExecutionContext context)
+        {
+            Generate(context);
         }
     }
 }

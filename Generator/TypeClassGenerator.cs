@@ -18,8 +18,6 @@ public class ClassEnumGenerator : ISourceGenerator
 {
     public void Execute(GeneratorExecutionContext context)
     {
-        AttributeGenerator.Generate(context);
-
         if (context.SyntaxReceiver is not SyntaxReceiverTypeClass receiver)
         {
             return;
