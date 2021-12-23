@@ -104,7 +104,7 @@ public class ClassEnumGenerator : ISourceGenerator
         !));
 
         var classDecleration = @$"
-namespace {namedSymbol.ContainingNamespace.Name}
+namespace {namedSymbol.ContainingNamespace}
 {{
     public static class {namedSymbol.Name}MatchExtensions
     {{
