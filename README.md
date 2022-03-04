@@ -19,7 +19,7 @@ The supported types are:
 
     var res = new Result<int, string>.Ok(100);
     Assert.Equal("100",
-        res.MatchResult => ok.Value.ToString(), error => error.Value.ToString()));
+        res.Match(ok => ok.Value.ToString(), error => error.Value.ToString()));
 
     // -- generated -- 
 
