@@ -14,12 +14,12 @@ The supported types are:
     public abstract record Result<T, R>
     {
         public record Ok(T Value): Result<T, R>;
-        public record Error(R Value): Result<T, R>;
+        public record Error(R Message): Result<T, R>;
     }
 
     var res = new Result<int, string>.Ok(100);
     Assert.Equal("100",
-        res.Match(ok => ok.Value.ToString(), error => error.Value.ToString()));
+        res.Match(ok => ok.Value.ToString(), error => error.Message));
 
     // -- generated -- 
 
